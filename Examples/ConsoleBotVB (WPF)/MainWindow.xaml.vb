@@ -12,7 +12,7 @@ Public Class MainWindow
     End Sub
 
     Private Sub MainWindow_Closing(sender As Object, e As CancelEventArgs) Handles Me.Closing
-        If ExtensionChild.IsConnected Then
+        If ExtensionChild.Ext.IsConnected Then
             ExtensionChild.ConsoleBot.HideBot() 'Hide bot before app closes
         End If
     End Sub

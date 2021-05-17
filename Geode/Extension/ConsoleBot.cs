@@ -5,7 +5,7 @@ namespace Geode.Extension
 {
     public class ConsoleBot
     {
-        private GService ExtensionChild;
+        private GeodeExtension ExtensionChild;
         public event EventHandler<string> OnMessageReceived;
         private readonly int BotID = new Random().Next(999000000, 999999999);
         public string BotName { get; private set; }
@@ -16,7 +16,7 @@ namespace Geode.Extension
         public string BotCreatorName { get; private set; }
         public string BotCreatorLook { get; private set; }
 
-        public ConsoleBot(GService ExtensionChild, string BotName, string BotMotto = "Console bot.", string BotLook = "hd-3704-29.ch-3135-95.lg-3136-95", string BotBadges = "BOT FR17A NO83 ITB26 NL446", string BotCreationDate = "W-W-1984", string BotCreatorName = "Lilith", string BotCreatorLook = "hr-3870-45.hd-600-10.ch-665-71.lg-3781-100-71.ha-3614-91-95.he-3469-1412.fa-3276-1412.ca-3702-71-71")
+        public ConsoleBot(GeodeExtension ExtensionChild, string BotName, string BotMotto = "Console bot.", string BotLook = "hd-3704-29.ch-3135-95.lg-3136-95", string BotBadges = "BOT FR17A NO83 ITB26 NL446", string BotCreationDate = "W-W-1984", string BotCreatorName = "Lilith", string BotCreatorLook = "hr-3870-45.hd-600-10.ch-665-71.lg-3781-100-71.ha-3614-91-95.he-3469-1412.fa-3276-1412.ca-3702-71-71")
         {
             {
                 this.ExtensionChild = ExtensionChild;
@@ -53,15 +53,18 @@ namespace Geode.Extension
 
             if (e.Packet.Id == ExtensionChild.Out.RemoveFriend.Id) // User requested a friend remove.
             {
-                e.Packet.ReadInt32();
-                int RequestedFriendID = e.Packet.ReadInt32();
-                if (RequestedFriendID == BotID) // Bot remove was requested.
+                int RequestedFriendsCount = e.Packet.ReadInt32();
+                for (int i = 0; i < RequestedFriendsCount; i++) // Iterate requested friends
                 {
-                    e.IsBlocked = true;
-                    HideBot();
-                    ExtensionChild.DisableEventHandlers = true; // To avoid infinite event handler loop
-                    ExtensionChild.OnDataIntercept(e);
-                    Environment.Exit(0);
+                    int RequestedFriendID = e.Packet.ReadInt32();
+                    if (RequestedFriendID == BotID) // Bot remove was requested.
+                    {
+                        e.IsBlocked = true;
+                        HideBot();
+                        ExtensionChild.DisableEventHandlers = true; // To avoid infinite event handler loop
+                        ExtensionChild.OnDataIntercept(e);
+                        Environment.Exit(0);
+                    }
                 }
             }
 

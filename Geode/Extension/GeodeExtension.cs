@@ -3,7 +3,6 @@ using System.Net;
 using System.Linq;
 using System.Text;
 using System.Reflection;
-using System.ComponentModel;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
@@ -15,8 +14,14 @@ using Geode.Network.Protocol;
 
 namespace Geode.Extension
 {
-    public class GService : IExtension, IHConnection, IDisposable
+    public class GeodeExtension : IDisposable
     {
+        public string Title { get; private set; }
+        public string Description { get; private set; }
+        public string Author { get; private set; }
+        public bool UtilizingOnDoubleClick { get; private set; }
+        public bool LeaveButtonVisible { get; private set; }
+
         public bool IsConnected { get; private set; } = false;
         public bool DisableEventHandlers = false;
         public event EventHandler<DataInterceptedEventArgs> OnDataInterceptEvent;
@@ -29,12 +34,9 @@ namespace Geode.Extension
         public event EventHandler<int> OnFloorItemsLoadedEvent;
 
         public bool MessagesInfo_Failed = false;
-        private readonly HNode _installer;
-        private readonly IExtension _container;
-        private readonly List<DataCaptureAttribute> _unknownDataAttributes;
-        private readonly Dictionary<ushort, Action<HPacket>> _extensionEvents;
-        private readonly Dictionary<ushort, List<DataCaptureAttribute>> _outDataAttributes, _inDataAttributes;
-
+        private HNode _installer { get; set; }
+        private GeodeExtension _container { get; set; }
+        private Dictionary<ushort, Action<HPacket>> _extensionEvents { get; set; }
         public const ushort EXTENSION_INFO = 1;
         public const ushort MANIPULATED_PACKET = 2;
         public const ushort REQUEST_FLAGS = 3;
@@ -48,51 +50,32 @@ namespace Geode.Extension
         public string ClientType { get; private set; }
         public HotelEndPoint HotelServer { get; private set; }
 
-        private readonly IDictionary<int, HEntity> _entities;
-        public IReadOnlyDictionary<int, HEntity> Entities { get; }
+        private IDictionary<int, HEntity> _entities { get; set; }
+        public IDictionary<int, HEntity> Entities { get; set; }
 
-        private readonly IDictionary<int, HWallItem> _wallItems;
-        public IReadOnlyDictionary<int, HWallItem> WallItems { get; }
+        private IDictionary<int, HWallItem> _wallItems { get; set; }
+        public IDictionary<int, HWallItem> WallItems { get; set; }
 
-        private readonly IDictionary<int, HFloorItem> _floorItems;
-        public IReadOnlyDictionary<int, HFloorItem> FloorItems { get; }
+        private IDictionary<int, HFloorItem> _floorItems { get; set; }
+        public IDictionary<int, HFloorItem> FloorItems { get; set; }
 
-        public static IPEndPoint DefaultModuleServer { get; }
+        public static IPEndPoint DefaultModuleServer { get; private set; }
         public List<HMessage> MessagesInfoIncoming { get; private set; }
         public List<HMessage> MessagesInfoOutgoing { get; private set; }
 
-        static GService()
+        public GeodeExtension(string Title = "Geode extension",string Description = "",string Author = "", bool UtilizingOnDoubleClick = false,bool LeaveButtonVisible = false)
         {
-            DefaultModuleServer = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 9092);
+            this.Title = Title;
+            this.Description = Description;
+            this.Author = Author;
+            this.UtilizingOnDoubleClick = UtilizingOnDoubleClick;
+            this.LeaveButtonVisible = LeaveButtonVisible;
         }
 
-        public GService(IExtension container)
-            : this(container, null, null)
-        { }
-        public GService(IExtension container, IPEndPoint moduleServer)
-            : this(container, null, moduleServer)
-        { }
-
-        protected GService()
-            : this(null, null, null)
-        { }
-        protected GService(IPEndPoint moduleServer)
-            : this(null, null, moduleServer)
-        { }
-
-        protected GService(GService parent)
-            : this(null, parent, null)
-        { }
-        protected GService(GService parent, IPEndPoint moduleServer)
-            : this(null, parent, moduleServer)
-        { }
-
-        private GService(IExtension container, GService parent, IPEndPoint moduleServer)
+        public void Start(int ConnectionPort = 9092)
         {
-            _container = container ?? this;
-            _unknownDataAttributes = parent?._unknownDataAttributes ?? new List<DataCaptureAttribute>();
-            _inDataAttributes = parent?._inDataAttributes ?? new Dictionary<ushort, List<DataCaptureAttribute>>();
-            _outDataAttributes = parent?._outDataAttributes ?? new Dictionary<ushort, List<DataCaptureAttribute>>();
+            DefaultModuleServer = new IPEndPoint(IPAddress.Parse("127.0.0.1"), ConnectionPort);
+            _container = this;
 
             _extensionEvents = new Dictionary<ushort, Action<HPacket>>
             {
@@ -114,25 +97,33 @@ namespace Geode.Extension
             _floorItems = new ConcurrentDictionary<int, HFloorItem>();
             FloorItems = new ReadOnlyDictionary<int, HFloorItem>(_floorItems);
 
-            if (LicenseManager.UsageMode != LicenseUsageMode.Runtime) return;
-            foreach (MethodInfo method in _container.GetType().GetAllMethods())
-            {
-                foreach (var dataCaptureAtt in method.GetCustomAttributes<DataCaptureAttribute>())
-                {
-                    dataCaptureAtt.Method = method;
-                    if (_unknownDataAttributes.Any(dca => dca.Equals(dataCaptureAtt))) continue;
-
-                    dataCaptureAtt.Target = _container;
-                    if (dataCaptureAtt.Id != null)
-                    {
-                        AddCallback(dataCaptureAtt, (ushort)dataCaptureAtt.Id);
-                    }
-                    else _unknownDataAttributes.Add(dataCaptureAtt);
-                }
-            }
-            _installer = HNode.ConnectNewAsync(moduleServer ?? DefaultModuleServer).GetAwaiter().GetResult();
+            _installer = HNode.ConnectNewAsync(DefaultModuleServer).GetAwaiter().GetResult();
             if (_installer == null) { OnCriticalError("Connection failed"); return; }
-            Task handleInstallerDataTask = HandleInstallerDataAsync();
+            bool HandleInstallerDataOK = false;
+            int HandleInstallerDataRetries = 10;
+            do
+            {
+                try
+                {
+                    HandleInstallerDataRetries -= 1;
+                    Task handleInstallerDataTask = HandleInstallerDataAsync();
+                    HandleInstallerDataOK = true;
+                }
+                catch
+                {
+                    HandleInstallerDataOK = false;
+                }
+            } while (HandleInstallerDataOK == false && HandleInstallerDataRetries > 0);
+            if (HandleInstallerDataOK == false)
+            {
+                OnCriticalError("HandleInstallerData failed");
+                return;
+            }
+        }
+
+        public void Stop()
+        {
+            Dispose();
         }
 
         public void OnEntitiesLoaded(int count)
@@ -170,19 +161,17 @@ namespace Geode.Extension
         {
             var infoResponsePacket = new EvaWirePacket(EXTENSION_INFO);
             AssemblyName moduleAssemblyName = Assembly.GetAssembly(_container.GetType()).GetName();
-            var moduleAtt = _container.GetType().GetCustomAttribute<ModuleAttribute>();
-
-            infoResponsePacket.Write(moduleAtt?.Title ?? moduleAssemblyName.Name); // Title
-            infoResponsePacket.Write(moduleAtt?.Author ?? string.Empty); // Author
+            infoResponsePacket.Write(Title ?? moduleAssemblyName.Name); // Title
+            infoResponsePacket.Write(Author ?? string.Empty); // Author
             infoResponsePacket.Write(moduleAssemblyName.Version.ToString()); // Version
-            infoResponsePacket.Write(moduleAtt?.Description ?? string.Empty);
-            infoResponsePacket.Write(moduleAtt.UtilizingOnDoubleClick); // UtilizingOnDoubleClick
+            infoResponsePacket.Write(Description ?? string.Empty);
+            infoResponsePacket.Write(UtilizingOnDoubleClick); // UtilizingOnDoubleClick
 
             infoResponsePacket.Write(false); // IsInstalledExtension
             infoResponsePacket.Write(string.Empty); // FileName
             infoResponsePacket.Write(string.Empty); // Cookie
 
-            infoResponsePacket.Write(moduleAtt.LeaveButtonVisible); // LeaveButtonVisible
+            infoResponsePacket.Write(LeaveButtonVisible); // LeaveButtonVisible
             infoResponsePacket.Write(false); // DeleteButtonVisible
 
             _installer.SendPacketAsync(infoResponsePacket);
@@ -204,16 +193,6 @@ namespace Geode.Extension
             if (MessagesInfo_Failed == false)
             {
                 HandleGameObjects(data.Packet, data.IsOutgoing);
-            }
-
-            Dictionary<ushort, List<DataCaptureAttribute>> callbacks = data.IsOutgoing ? _outDataAttributes : _inDataAttributes;
-            if (callbacks.TryGetValue(data.Packet.Id, out List<DataCaptureAttribute> attributes))
-            {
-                foreach (DataCaptureAttribute attribute in attributes)
-                {
-                    data.Packet.Position = 0;
-                    attribute.Invoke(data);
-                }
             }
 
             string stringified = data.ToString(true);
@@ -293,7 +272,6 @@ namespace Geode.Extension
                 MessagesInfo_Failed = true;
             }
 
-            ResolveCallbacks();
             IsConnected = true;
             if (DisableEventHandlers == false)
             {
@@ -306,8 +284,6 @@ namespace Geode.Extension
             _entities.Clear();
             _wallItems.Clear();
             _floorItems.Clear();
-            _inDataAttributes.Clear();
-            _outDataAttributes.Clear();
             if (DisableEventHandlers == false)
             {
                 try { OnDisconnectedEvent.Invoke(this, packet); } catch { }; //Invoke event handler
@@ -352,53 +328,13 @@ namespace Geode.Extension
         public HMessage GetMessage(ushort id, bool isOutgoing) => GetMessages(isOutgoing).GetMessage(id);
         public HMessage GetMessage(string identifier, bool isOutgoing) => GetMessages(isOutgoing).GetMessage(identifier);
 
-        private void ResolveCallbacks()
-        {
-            var unresolved = new Dictionary<string, IList<string>>();
-            foreach (PropertyInfo property in _container.GetType().GetAllProperties())
-            {
-                var messageAtt = property.GetCustomAttribute<MessageAttribute>();
-                if (string.IsNullOrWhiteSpace(messageAtt?.Identifier)) continue;
-
-                HMessage message = GetMessage(messageAtt.Identifier, messageAtt.IsOutgoing);
-                if (message == null)
-                {
-                    if (!unresolved.TryGetValue(messageAtt.Identifier, out IList<string> users))
-                    {
-                        users = new List<string>();
-                        unresolved.Add(messageAtt.Identifier, users);
-                    }
-                    users.Add($"Property({property.Name})");
-                }
-                else property.SetValue(_container, message);
-            }
-            foreach (DataCaptureAttribute dataCaptureAtt in _unknownDataAttributes)
-            {
-                if (string.IsNullOrWhiteSpace(dataCaptureAtt.Identifier)) continue;
-                HMessage message = GetMessage(dataCaptureAtt.Identifier, dataCaptureAtt.IsOutgoing);
-                if (message == null)
-                {
-                    if (!unresolved.TryGetValue(dataCaptureAtt.Identifier, out IList<string> users))
-                    {
-                        users = new List<string>();
-                        unresolved.Add(dataCaptureAtt.Identifier, users);
-                    }
-                    users.Add($"Method({dataCaptureAtt.Method})");
-                }
-                else AddCallback(dataCaptureAtt, message.Id);
-            }
-            if (unresolved.Count > 0)
-            {
-                Console.WriteLine(new MessagesResolveException(ClientVersion, unresolved));
-            }
-        }
         private async Task HandleInstallerDataAsync()
         {
             await Task.Yield();
             try
             {
                 HPacket packet = await _installer.ReceivePacketAsync().ConfigureAwait(true);
-                if (packet == null) { OnCriticalError("Empty packet input"); return; }
+                if (packet == null) { throw new Exception("Empty packet input"); }
 
                 Task handleInstallerDataTask = HandleInstallerDataAsync();
                 if (_extensionEvents.TryGetValue(packet.Id, out Action<HPacket> handler))
@@ -406,7 +342,7 @@ namespace Geode.Extension
                     handler(packet);
                 }
             }
-            catch { OnCriticalError("Wrong packet input"); return; }
+            catch { throw new Exception("Wrong packet input"); }
         }
         private void HandleGameObjects(HPacket packet, bool isOutgoing)
         {
@@ -449,30 +385,21 @@ namespace Geode.Extension
             }
             packet.Position = 0;
         }
-        private void AddCallback(DataCaptureAttribute attribute, ushort id)
-        {
-            Dictionary<ushort, List<DataCaptureAttribute>> callbacks =
-                attribute.IsOutgoing ? _outDataAttributes : _inDataAttributes;
-
-            if (!callbacks.TryGetValue(id, out List<DataCaptureAttribute> attributes))
-            {
-                attributes = new List<DataCaptureAttribute>();
-                callbacks.Add(id, attributes);
-            }
-            attributes.Add(attribute);
-        }
         public void Dispose()
         {
             try { Dispose(true); } catch { Console.WriteLine("WARNING: Dispose event failed."); }
         }
         protected virtual void Dispose(bool disposing)
         {
-            if (disposing)
+            try
             {
-                _installer.Dispose();
+                if (disposing)
+                {
+                    _installer.Dispose();
+                }
             }
+            catch { Console.WriteLine("WARNING: Installer dispose event failed."); }
             _container.OnDisconnected(null);
-            _unknownDataAttributes.Clear();
         }
     }
 }

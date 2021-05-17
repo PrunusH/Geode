@@ -26,7 +26,7 @@ namespace ConsoleBotCSharp
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            if (ExtensionChild.IsConnected)
+            if (ExtensionChild.Ext.IsConnected)
             {
                 ExtensionChild.ConsoleBot.HideBot(); // Hide bot before app closes
             }
