@@ -275,7 +275,9 @@ namespace Geode.Extension
             IsConnected = true;
             if (DisableEventHandlers == false)
             {
+#if !DEBUG 
                 try { OnConnectedEvent.Invoke(this, packet); } catch { };//Invoke event handler
+#endif
             }
         }
         public virtual void OnDisconnected(HPacket packet)
