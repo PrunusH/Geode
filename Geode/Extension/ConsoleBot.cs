@@ -7,7 +7,7 @@ namespace Geode.Extension
     {
         private GeodeExtension ExtensionChild;
         public event EventHandler<string> OnMessageReceived;
-        private readonly int BotID = new Random().Next(999000000, 999999999);
+        public readonly int BotID = new Random().Next(999000000, 999999999);
         public string BotName { get; private set; }
         public string BotMotto { get; private set; }
         public string BotLook { get; private set; }
