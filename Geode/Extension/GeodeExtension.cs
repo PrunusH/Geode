@@ -11,6 +11,7 @@ using Geode.Habbo;
 using Geode.Network;
 using Geode.Habbo.Messages;
 using Geode.Network.Protocol;
+using System.Net.NetworkInformation;
 
 namespace Geode.Extension
 {
@@ -72,8 +73,18 @@ namespace Geode.Extension
             this.LeaveButtonVisible = LeaveButtonVisible;
         }
 
-        public void Start(int ConnectionPort = 9092)
+        public void Start(int ConnectionPort = 0)
         {
+            if (ConnectionPort == 0)
+            {
+                ConnectionPort = GetReadyToConnectGEarthPort();
+            }
+            if (ConnectionPort == 0)
+            {
+                OnCriticalError("Could not find an available G-Earth port");
+                return;
+            }
+
             DefaultModuleServer = new IPEndPoint(IPAddress.Parse("127.0.0.1"), ConnectionPort);
             _container = this;
 
@@ -119,6 +130,65 @@ namespace Geode.Extension
                 OnCriticalError("HandleInstallerData failed");
                 return;
             }
+        }
+
+        public static int GetReadyToConnectGEarthPort()
+        {
+            int DefaultPort = 9092;
+            int DefaultMaxTries = 50;
+            int CurrentPort = DefaultPort;
+            int CurrentTry = 0;
+            bool StopReached = false;
+            while (!StopReached)
+            {
+                string RemotePortConnectionStatus = IsConnectedToRemotePort(CurrentPort);
+                if (RemotePortConnectionStatus == "NO")
+                {
+                    return CurrentPort;
+                }
+                CurrentPort += 1;
+                CurrentTry += 1;
+                if (CurrentTry >= DefaultMaxTries)
+                {
+                    StopReached = true;
+                }
+            }
+            return 0;
+        }
+
+        public static string IsConnectedToRemotePort(int port)
+        {
+            IPGlobalProperties properties = IPGlobalProperties.GetIPGlobalProperties();
+            TcpConnectionInformation[] connections = properties.GetActiveTcpConnections();
+            foreach (TcpConnectionInformation c in connections)
+            {
+                if (c.RemoteEndPoint.Port == port)
+                {
+                    return "YES";
+                }
+            }
+            if (IsPortListening(port))
+            {
+                return "NO";
+            }
+            else
+            {
+                return "NO_UNLISTENING";
+            }
+        }
+
+        public static bool IsPortListening(int port)
+        {
+            IPGlobalProperties ipProperties = IPGlobalProperties.GetIPGlobalProperties();
+            IPEndPoint[] ipEndPoints = ipProperties.GetActiveTcpListeners();
+            foreach (IPEndPoint endPoint in ipEndPoints)
+            {
+                if (endPoint.Port == port)
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         public void Stop()
