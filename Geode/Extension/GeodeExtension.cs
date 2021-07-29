@@ -75,15 +75,23 @@ namespace Geode.Extension
 
         public void Start(int ConnectionPort = 0)
         {
+
+            //Remove when automatic port detection is fixed
             if (ConnectionPort == 0)
             {
-                ConnectionPort = GetReadyToConnectGEarthPort();
+                ConnectionPort = 9092;
             }
-            if (ConnectionPort == 0)
-            {
-                OnCriticalError("Could not find an available G-Earth port");
-                return;
-            }
+            //
+
+            //if (ConnectionPort == 0)
+            //{
+            //    ConnectionPort = GetReadyToConnectGEarthPort();
+            //}
+            //if (ConnectionPort == 0)
+            //{
+            //    OnCriticalError("Could not find an available G-Earth port");
+            //    return;
+            //}
 
             DefaultModuleServer = new IPEndPoint(IPAddress.Parse("127.0.0.1"), ConnectionPort);
             _container = this;
