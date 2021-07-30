@@ -13,3 +13,5 @@ G-Earth 1.4.1 or later is required, only Flash/AIR client is supported.<br>
 <b>Guide for developers:</b>
 - Use your favorite base code from the Examples folder.
 - Once you have the extension ready, use Publish option and distribute the executable.
+
+Also don't forget to check <a href="https://github.com/LilithRainbows/Geode/wiki">project wiki</a> to solve FAQs.
