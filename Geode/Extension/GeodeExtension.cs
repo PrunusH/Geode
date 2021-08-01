@@ -65,6 +65,9 @@ namespace Geode.Extension
         public List<HMessage> MessagesInfoIncoming { get; private set; }
         public List<HMessage> MessagesInfoOutgoing { get; private set; }
 
+        private HMessage WaitForPacket_RequestedHMessage;
+        private DataInterceptedEventArgs WaitForPacket_ReturnedData;
+
         public GeodeExtension(string Title = "Geode extension",string Description = "",string Author = "", bool UtilizingOnDoubleClick = false,bool LeaveButtonVisible = false)
         {
             this.Title = Title;
@@ -268,9 +271,35 @@ namespace Geode.Extension
 
             var dataInterceptedArgs = new DataInterceptedEventArgs(stringifiedInterceptionData);
             OnDataIntercept(dataInterceptedArgs);
+        
+        }
+
+        private async Task WaitForPacketReturnAsync()
+        {
+            while (WaitForPacket_RequestedHMessage is not null)
+            {
+                await Task.Delay(1);
+            }
+        }
+        public virtual async Task<DataInterceptedEventArgs> WaitForPacketAsync(HMessage RequestedMessage, int TimeOut)
+        {
+            WaitForPacket_RequestedHMessage = RequestedMessage;
+            WaitForPacket_ReturnedData = null;
+            await Task.WhenAny(WaitForPacketReturnAsync(), Task.Delay(TimeOut));
+            WaitForPacket_RequestedHMessage = null;
+            return WaitForPacket_ReturnedData;
         }
         public virtual void OnDataIntercept(DataInterceptedEventArgs data)
         {
+            if (WaitForPacket_RequestedHMessage is not null)
+            {
+                if (WaitForPacket_RequestedHMessage.Id == data.Packet.Id && WaitForPacket_RequestedHMessage.IsOutgoing == data.IsOutgoing)
+                {
+                    WaitForPacket_ReturnedData = data;
+                    WaitForPacket_RequestedHMessage = null;
+                }
+            }
+
             if (IsConnected && DisableEventHandlers == false)
             {
                 try { OnDataInterceptEvent.Invoke(this, data); } catch { };//Invoke event handler
