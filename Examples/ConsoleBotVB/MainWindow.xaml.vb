@@ -67,7 +67,7 @@ Class MainWindow
     End Sub
 
     Private Sub Extension_OnCriticalErrorEvent(sender As Object, e As String) Handles Extension.OnCriticalErrorEvent 'Extension critical error.
-        MsgBox(e, MsgBoxStyle.Critical & ".", "Critical error")
+        MsgBox(e & ".", MsgBoxStyle.Critical, "Critical error")
         Environment.Exit(0)
     End Sub
 End Class
