@@ -66,9 +66,10 @@ namespace Geode.Extension
         public List<HMessage> MessagesInfoOutgoing { get; private set; }
 
         private HMessage WaitForPacket_RequestedHMessage;
+        private string WaitForPacket_ContainString;
         private DataInterceptedEventArgs WaitForPacket_ReturnedData;
 
-        public GeodeExtension(string Title = "Geode extension",string Description = "",string Author = "", bool UtilizingOnDoubleClick = false,bool LeaveButtonVisible = false)
+        public GeodeExtension(string Title = "Geode extension", string Description = "", string Author = "", bool UtilizingOnDoubleClick = false, bool LeaveButtonVisible = false)
         {
             this.Title = Title;
             this.Description = Description;
@@ -143,7 +144,8 @@ namespace Geode.Extension
                     OnCriticalError("HandleInstallerData failed");
                     return;
                 }
-            } catch
+            }
+            catch
             {
                 OnCriticalError("Generic start error");
                 return;
@@ -271,7 +273,7 @@ namespace Geode.Extension
 
             var dataInterceptedArgs = new DataInterceptedEventArgs(stringifiedInterceptionData);
             OnDataIntercept(dataInterceptedArgs);
-        
+
         }
 
         private async Task WaitForPacketReturnAsync()
@@ -281,9 +283,10 @@ namespace Geode.Extension
                 await Task.Delay(1);
             }
         }
-        public virtual async Task<DataInterceptedEventArgs> WaitForPacketAsync(HMessage RequestedMessage, int TimeOut)
+        public virtual async Task<DataInterceptedEventArgs> WaitForPacketAsync(HMessage RequestedMessage, int TimeOut, string ContainString = "")
         {
             WaitForPacket_RequestedHMessage = RequestedMessage;
+            WaitForPacket_ContainString = ContainString;
             WaitForPacket_ReturnedData = null;
             await Task.WhenAny(WaitForPacketReturnAsync(), Task.Delay(TimeOut));
             WaitForPacket_RequestedHMessage = null;
@@ -295,8 +298,16 @@ namespace Geode.Extension
             {
                 if (WaitForPacket_RequestedHMessage.Id == data.Packet.Id && WaitForPacket_RequestedHMessage.IsOutgoing == data.IsOutgoing)
                 {
-                    WaitForPacket_ReturnedData = data;
-                    WaitForPacket_RequestedHMessage = null;
+                    bool SendWaitForPacketData = true;
+                    if (WaitForPacket_ContainString != "")
+                    {
+                        SendWaitForPacketData = data.Packet.ToString().Contains(WaitForPacket_ContainString);
+                    }
+                    if (SendWaitForPacketData)
+                    {
+                        WaitForPacket_ReturnedData = data;
+                        WaitForPacket_RequestedHMessage = null;
+                    }
                 }
             }
 
@@ -343,7 +354,7 @@ namespace Geode.Extension
                         CurrentMessageHash = CurrentMessageName;
                     }
                     CurrentMessageHash = CurrentMessageSource + "_" + CurrentMessageHash;
-                    HMessage CurrentHMessage = new HMessage((ushort)CurrentMessageID, CurrentMessageName,CurrentMessageIsOutgoing);
+                    HMessage CurrentHMessage = new HMessage((ushort)CurrentMessageID, CurrentMessageName, CurrentMessageIsOutgoing);
                     if (CurrentMessageIsOutgoing)
                     {
                         MessagesInfoOutgoing.Add(CurrentHMessage);
