@@ -124,6 +124,7 @@ namespace Geode.Extension
 
                 _installer = HNode.ConnectAsync(DefaultModuleServer).GetAwaiter().GetResult();
                 if (_installer == null) { OnCriticalError("Connection failed"); return; }
+                SocketDisconnectionWatcher();
                 bool HandleInstallerDataOK = false;
                 int HandleInstallerDataRetries = 10;
                 do
@@ -273,7 +274,6 @@ namespace Geode.Extension
 
             var dataInterceptedArgs = new DataInterceptedEventArgs(stringifiedInterceptionData);
             OnDataIntercept(dataInterceptedArgs);
-
         }
 
         private async Task WaitForPacketReturnAsync()
@@ -282,6 +282,14 @@ namespace Geode.Extension
             {
                 await Task.Delay(1);
             }
+        }
+        private async Task SocketDisconnectionWatcher()
+        {
+            while (_installer.IsConnected)
+            {
+                await Task.Delay(500);
+            }
+            OnCriticalError("Socket disconnected");
         }
         public virtual async Task<DataInterceptedEventArgs> WaitForPacketAsync(HMessage RequestedMessage, int TimeOut, string ContainString = "")
         {
