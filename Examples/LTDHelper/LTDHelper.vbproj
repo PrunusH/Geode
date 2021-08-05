@@ -5,6 +5,7 @@
     <TargetFramework>net5.0-windows</TargetFramework>
     <RootNamespace>LTDHelper</RootNamespace>
     <UseWPF>true</UseWPF>
+    <StartupObject>LTDHelper.SingleInstance</StartupObject>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">

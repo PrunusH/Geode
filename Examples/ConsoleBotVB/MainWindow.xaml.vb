@@ -51,7 +51,7 @@ Class MainWindow
     End Sub
 
     Private Sub Extension_OnDataInterceptEvent(sender As Object, e As DataInterceptedEventArgs) Handles Extension.OnDataInterceptEvent
-        If e.Packet.Id = Extension.In.FriendRequests.Id Then 'Show Bot when the initial console load is complete.
+        If Extension.In.FriendRequests.Match(e) Then 'Show Bot when the initial console load is complete.
             BotShowAndWelcome()
         End If
     End Sub

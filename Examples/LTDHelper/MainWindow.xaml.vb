@@ -89,10 +89,10 @@ Class MainWindow
     End Sub
 
     Private Sub Extension_OnDataInterceptEvent(sender As Object, e As DataInterceptedEventArgs) Handles Extension.OnDataInterceptEvent
-        If e.Packet.Id = Extension.In.FriendRequests.Id Then 'Show Bot when the initial console load is complete.
+        If Extension.In.FriendRequests.Match(e) Then 'Show Bot when the initial console load is complete.
             BotShowAndWelcome()
         End If
-        If e.Packet.Id = Extension.In.ErrorReport.Id Or e.Packet.Id = Extension.In.PurchaseError.Id Or e.Packet.Id = Extension.In.PurchaseNotAllowed.Id Or e.Packet.Id = Extension.In.NotEnoughBalance.Id Then 'Ignore common purchase errors
+        If Extension.In.ErrorReport.Match(e) Or Extension.In.PurchaseError.Match(e) Or Extension.In.PurchaseNotAllowed.Match(e) Or Extension.In.NotEnoughBalance.Match(e) Then 'Ignore common purchase errors
             If TaskStarted = True Then
                 e.IsBlocked = True
             End If
@@ -114,3 +114,19 @@ Class MainWindow
         Environment.Exit(0)
     End Sub
 End Class
+
+Module SingleInstance
+    Sub Main()
+        Dim noPreviousInstance As Boolean
+
+        Using m As New Threading.Mutex(True, "LTDHelper for Geode", noPreviousInstance)
+            If Not noPreviousInstance Then
+                MessageBox.Show("Extension is already started!", "Error", MessageBoxButton.OK, MessageBoxImage.Error)
+            Else
+                Dim mainWindow As New MainWindow()
+                Dim app As New Application()
+                app.Run(mainWindow)
+            End If
+        End Using
+    End Sub
+End Module

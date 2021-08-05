@@ -124,16 +124,16 @@ namespace AntiBobba
 
         private void Extension_OnDataInterceptEvent(object sender, DataInterceptedEventArgs e)
         {
-            if (e.Packet.Id == Extension.In.FriendRequests.Id) // Show Bot when the initial console load is complete.
+            if (Extension.In.FriendRequests.Match(e)) // Show Bot when the initial console load is complete.
             {
                 BotShowAndWelcome();
             }
-            if (e.Packet.Id == Extension.Out.Chat.Id && IsEnabled) //Public chat
+            if (Extension.Out.Chat.Match(e) && IsEnabled) //Public chat
             {
                 e.IsBlocked = true;
                 Extension.SendToServerAsync(Extension.Out.Chat, BypassFilter(e.Packet.ReadUTF8()), e.Packet.ReadInt32(), e.Packet.ReadInt32());
             }
-            if (e.Packet.Id == Extension.Out.Whisper.Id && IsEnabled) //Whisper
+            if (Extension.Out.Whisper.Match(e) && IsEnabled) //Whisper
             {
                 string WhisperOriginal = e.Packet.ReadUTF8();
                 string WhisperDestination = WhisperOriginal.Remove(WhisperOriginal.IndexOf(" "));
@@ -142,7 +142,7 @@ namespace AntiBobba
                 e.IsBlocked = true;
                 Extension.SendToServerAsync(Extension.Out.Whisper, WhisperModded, e.Packet.ReadInt32());
             }
-            if (e.Packet.Id == Extension.Out.SendMsg.Id && IsEnabled) //Console chat
+            if (Extension.Out.SendMsg.Match(e) && IsEnabled) //Console chat
             {
                 int MessageDestination = e.Packet.ReadInt32();
                 if (MessageDestination == ConsoleBot.BotID)

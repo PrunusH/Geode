@@ -98,7 +98,7 @@ namespace ConsoleBotCSharp
 
         private void Extension_OnDataInterceptEvent(object sender, DataInterceptedEventArgs e)
         {
-            if (e.Packet.Id == Extension.In.FriendRequests.Id) // Show Bot when the initial console load is complete.
+            if (Extension.In.FriendRequests.Match(e)) // Show Bot when the initial console load is complete.
             {
                 BotShowAndWelcome();
             }

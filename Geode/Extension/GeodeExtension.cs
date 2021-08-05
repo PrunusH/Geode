@@ -325,7 +325,7 @@ namespace Geode.Extension
             }
             if (MessagesInfo_Failed == false)
             {
-                HandleGameObjects(data.Packet, data.IsOutgoing);
+                HandleGameObjects(data);
             }
 
             string stringified = data.ToString(true);
@@ -477,46 +477,43 @@ namespace Geode.Extension
             }
             catch { throw new Exception("Wrong packet input"); }
         }
-        private void HandleGameObjects(HPacket packet, bool isOutgoing)
+        private void HandleGameObjects(DataInterceptedEventArgs data)
         {
-            packet.Position = 0;
-            if (!isOutgoing)
+            data.Packet.Position = 0;
+            if (In.Users.Match(data))
             {
-                if (packet.Id == In.Users)
+                HEntity[] entities = HEntity.Parse(data.Packet);
+                foreach (HEntity entity in entities)
                 {
-                    HEntity[] entities = HEntity.Parse(packet);
-                    foreach (HEntity entity in entities)
-                    {
-                        _entities[entity.Index] = entity;
-                    }
-                    _container.OnEntitiesLoaded(entities.Length);
+                    _entities[entity.Index] = entity;
                 }
-                else if (packet.Id == In.Items)
-                {
-                    HWallItem[] wallItems = HWallItem.Parse(packet);
-                    foreach (HWallItem wallItem in wallItems)
-                    {
-                        _wallItems[wallItem.Id] = wallItem;
-                    }
-                    _container.OnWallItemsLoaded(wallItems.Length);
-                }
-                else if (packet.Id == In.Objects)
-                {
-                    HFloorObject[] floorObjects = HFloorObject.Parse(packet);
-                    foreach (HFloorObject floorItem in floorObjects)
-                    {
-                        _floorObjects[floorItem.Id] = floorItem;
-                    }
-                    _container.OnFloorObjectsLoaded(floorObjects.Length);
-                }
-                else if (packet.Id == In.FloorHeightMap)
-                {
-                    _entities.Clear();
-                    _wallItems.Clear();
-                    _floorObjects.Clear();
-                }
+                _container.OnEntitiesLoaded(entities.Length);
             }
-            packet.Position = 0;
+            else if (In.Items.Match(data))
+                {
+                HWallItem[] wallItems = HWallItem.Parse(data.Packet);
+                foreach (HWallItem wallItem in wallItems)
+                {
+                    _wallItems[wallItem.Id] = wallItem;
+                }
+                _container.OnWallItemsLoaded(wallItems.Length);
+            }
+            else if (In.Objects.Match(data))
+            {
+                HFloorObject[] floorObjects = HFloorObject.Parse(data.Packet);
+                foreach (HFloorObject floorItem in floorObjects)
+                {
+                    _floorObjects[floorItem.Id] = floorItem;
+                }
+                _container.OnFloorObjectsLoaded(floorObjects.Length);
+            }
+            else if (In.FloorHeightMap.Match(data))
+            {
+                _entities.Clear();
+                _wallItems.Clear();
+                _floorObjects.Clear();
+            }
+            data.Packet.Position = 0;
         }
         public void Dispose()
         {
