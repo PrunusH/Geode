@@ -3,7 +3,6 @@ using System.Text;
 using System.Windows;
 using Geode.Extension;
 using Geode.Network;
-using Geode.Network.Protocol;
 
 namespace AntiBobba
 {
@@ -12,7 +11,7 @@ namespace AntiBobba
     {
         public ConsoleBot ConsoleBot;
         public GeodeExtension Extension;
-        public bool IsEnabled = true;
+        public bool IsEnabled = false;
 
         public MainWindow()
         {
@@ -21,30 +20,18 @@ namespace AntiBobba
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            Extension = new GeodeExtension("AntiBobba", "Geode examples.", "Lilith", true, false); // Instantiate extension
+            Extension = new GeodeExtension("AntiBobba", "Geode examples.", "Lilith"); // Instantiate extension
             //Add extension event handlers
             Extension.OnDataInterceptEvent += Extension_OnDataInterceptEvent;
-            Extension.OnDoubleClickEvent += Extension_OnDoubleClickEvent;
-            Extension.OnConnectedEvent += Extension_OnConnectedEvent;
             Extension.OnCriticalErrorEvent += Extension_OnCriticalErrorEvent;
             //
-            Extension.Start(); // Start extension
+            Extension.Start(); //Start extension
             ConsoleBot = new ConsoleBot(Extension, "AntiBobba"); // Instantiate a new ConsoleBot
-            ConsoleBot.OnMessageReceived += ConsoleBot_OnMessageReceived; //Add ConsoleBot event handler
-        }
-
-        private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
-        {
-            if (Extension.IsConnected)
-            {
-                ConsoleBot.HideBot(); // Hide bot before app closes
-            }
-        }
-
-        public void BotShowAndWelcome()
-        {
-            ConsoleBot.ShowBot();
-            BotWelcome();
+            //Add ConsoleBot event handlers
+            ConsoleBot.OnMessageReceived += ConsoleBot_OnMessageReceived;
+            ConsoleBot.OnBotLoaded += ConsoleBot_OnBotLoaded;
+            //
+            ConsoleBot.ShowBot(); //Show ConsoleBot
         }
 
         public void BotWelcome()
@@ -55,6 +42,7 @@ namespace AntiBobba
 
         public void ShowEnabledInfo()
         {
+            ConsoleBot.BotSendMessage("This tool can lead to account ban/mute, use at your own risk!");
             if (IsEnabled == true)
             {
                 ConsoleBot.BotSendMessage("BobbaBlock is enabled, use /stop to stop.");
@@ -91,16 +79,21 @@ namespace AntiBobba
             StringBuilder stringBuilder = new StringBuilder();
             foreach (char value in input)
             {
-                stringBuilder.Append("ѵѫ"); //Alternative: ӵӵ)
+                stringBuilder.Append("ӵӵ"); //Alternative: ѵѫ)
                 stringBuilder.Append(value);
             }
-            stringBuilder.Append("ѵѫ"); //Alternative: ӵӵ
+            stringBuilder.Append("ӵӵ"); //Alternative: ѵѫ
             return stringBuilder.ToString();
+        }
+
+        private void ConsoleBot_OnBotLoaded(object sender, string e)
+        {
+            BotWelcome(); //Show welcome message when ConsoleBot loaded
         }
 
         private void ConsoleBot_OnMessageReceived(object sender, string e)
         {
-            switch (e.ToLower()) // Handle received message
+            switch (e.ToLower()) //Handle received message
             {
                 case "/start":
                     {
@@ -124,10 +117,6 @@ namespace AntiBobba
 
         private void Extension_OnDataInterceptEvent(object sender, DataInterceptedEventArgs e)
         {
-            if (Extension.In.FriendRequests.Match(e)) // Show Bot when the initial console load is complete.
-            {
-                BotShowAndWelcome();
-            }
             if (Extension.Out.Chat.Match(e) && IsEnabled) //Public chat
             {
                 e.IsBlocked = true;
@@ -158,23 +147,17 @@ namespace AntiBobba
             }
         }
 
-        private void Extension_OnConnectedEvent(object sender, HPacket e) // G-Earth is connected.
+        private void Extension_OnCriticalErrorEvent(object sender, string e)
         {
-            BotShowAndWelcome();
-        }
-
-        private void Extension_OnDoubleClickEvent(object sender, HPacket e) // G-Earth extension play button clicked.
-        {
-            if (Extension.IsConnected)
-            {
-                BotShowAndWelcome();
-            }
-        }
-
-        private void Extension_OnCriticalErrorEvent(object sender, string e) // Extension critical error.
-        {
-            MessageBox.Show(e + ".", "Critical error", MessageBoxButton.OK, MessageBoxImage.Error);
+            ShowInTaskbar = true;
+            Activate();
+            MessageBox.Show(e + ".", "Critical error", MessageBoxButton.OK, MessageBoxImage.Error); //Show extension critical error
             Environment.Exit(0);
         }
+
+        private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            ConsoleBot.HideBot(); //Hide bot before app closes
+        }
     }
-}   
+}

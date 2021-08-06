@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Windows;
 using Geode.Extension;
-using Geode.Network;
-using Geode.Network.Protocol;
 
 namespace ConsoleBotCSharp
 {
@@ -18,30 +16,17 @@ namespace ConsoleBotCSharp
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            Extension = new GeodeExtension("ConsoleBotCSharp", "Geode examples.", "Lilith", true, false); // Instantiate extension
+            Extension = new GeodeExtension("ConsoleBotCSharp", "Geode examples.", "Lilith"); //Instantiate extension
             //Add extension event handlers
-            Extension.OnDataInterceptEvent += Extension_OnDataInterceptEvent;
-            Extension.OnDoubleClickEvent += Extension_OnDoubleClickEvent;
-            Extension.OnConnectedEvent += Extension_OnConnectedEvent;
             Extension.OnCriticalErrorEvent += Extension_OnCriticalErrorEvent;
             //
-            Extension.Start(); // Start extension
-            ConsoleBot = new ConsoleBot(Extension, "CSharp example"); // Instantiate a new ConsoleBot
-            ConsoleBot.OnMessageReceived += ConsoleBot_OnMessageReceived; //Add ConsoleBot event handler
-        }
-
-        private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
-        {
-            if (Extension.IsConnected)
-            {
-                ConsoleBot.HideBot(); // Hide bot before app closes
-            }
-        }
-
-        public void BotShowAndWelcome()
-        {
-            ConsoleBot.ShowBot();
-            BotWelcome();
+            Extension.Start(); //Start extension
+            ConsoleBot = new ConsoleBot(Extension, "CSharp example"); //Instantiate a new ConsoleBot
+            //Add ConsoleBot event handlers
+            ConsoleBot.OnMessageReceived += ConsoleBot_OnMessageReceived;
+            ConsoleBot.OnBotLoaded += ConsoleBot_OnBotLoaded; ;
+            //
+            ConsoleBot.ShowBot(); //Show ConsoleBot
         }
 
         public void BotWelcome()
@@ -50,9 +35,14 @@ namespace ConsoleBotCSharp
             ConsoleBot.BotSendMessage("Use /help to get info.");
         }
 
+        private void ConsoleBot_OnBotLoaded(object sender, string e)
+        {
+            BotWelcome(); //Show welcome message when ConsoleBot loaded
+        }
+
         private void ConsoleBot_OnMessageReceived(object sender, string e)
         {
-            switch (e.ToLower()) // Handle received message
+            switch (e.ToLower()) //Handle received message
             {
                 case "/help":
                     {
@@ -96,31 +86,17 @@ namespace ConsoleBotCSharp
             }
         }
 
-        private void Extension_OnDataInterceptEvent(object sender, DataInterceptedEventArgs e)
+        private void Extension_OnCriticalErrorEvent(object sender, string e)
         {
-            if (Extension.In.FriendRequests.Match(e)) // Show Bot when the initial console load is complete.
-            {
-                BotShowAndWelcome();
-            }
-        }
-
-        private void Extension_OnConnectedEvent(object sender, HPacket e) // G-Earth is connected.
-        {
-            BotShowAndWelcome();
-        }
-
-        private void Extension_OnDoubleClickEvent(object sender, HPacket e) // G-Earth extension play button clicked.
-        {
-            if (Extension.IsConnected)
-            {
-                BotShowAndWelcome();
-            }
-        }
-
-        private void Extension_OnCriticalErrorEvent(object sender, string e) // Extension critical error.
-        {
-            MessageBox.Show(e + ".", "Critical error", MessageBoxButton.OK, MessageBoxImage.Error);
+            ShowInTaskbar = true;
+            Activate();
+            MessageBox.Show(e + ".", "Critical error", MessageBoxButton.OK, MessageBoxImage.Error); //Show extension critical error
             Environment.Exit(0);
         }
+
+        private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            ConsoleBot.HideBot(); //Hide bot before app closes
+        }
     }
-}   
+}

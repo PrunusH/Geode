@@ -1,32 +1,24 @@
 ﻿Imports System.ComponentModel
 Imports Geode.Extension
-Imports Geode.Network
-Imports Geode.Network.Protocol
 
 Class MainWindow
     Public WithEvents Extension As GeodeExtension
     Public WithEvents ConsoleBot As ConsoleBot
 
     Private Sub MainWindow_Loaded(sender As Object, e As RoutedEventArgs) Handles Me.Loaded
-        Extension = New GeodeExtension("ConsoleBotVB", "Geode examples.", "Lilith", True, False) 'Instantiate extension
+        Extension = New GeodeExtension("ConsoleBotVB", "Geode examples.", "Lilith") 'Instantiate extension
         Extension.Start() 'Start extension
         ConsoleBot = New ConsoleBot(Extension, "VB example") 'Instantiate a new ConsoleBot
-    End Sub
-
-    Private Sub MainWindow_Closing(sender As Object, e As CancelEventArgs) Handles Me.Closing
-        If Extension.IsConnected Then
-            ConsoleBot.HideBot() 'Hide bot before app closes
-        End If
-    End Sub
-
-    Sub BotShowAndWelcome()
-        ConsoleBot.ShowBot()
-        BotWelcome()
+        ConsoleBot.ShowBot() 'Show ConsoleBot
     End Sub
 
     Sub BotWelcome()
         ConsoleBot.BotSendMessage("Welcome |")
         ConsoleBot.BotSendMessage("Use /help to get info.")
+    End Sub
+
+    Private Sub ConsoleBot_OnBotLoaded(sender As Object, e As String) Handles ConsoleBot.OnBotLoaded
+        BotWelcome() 'Show welcome message when ConsoleBot loaded
     End Sub
 
     Private Sub ConsoleBot_OnMessageReceived(sender As Object, e As String) Handles ConsoleBot.OnMessageReceived
@@ -50,24 +42,14 @@ Class MainWindow
         End Select
     End Sub
 
-    Private Sub Extension_OnDataInterceptEvent(sender As Object, e As DataInterceptedEventArgs) Handles Extension.OnDataInterceptEvent
-        If Extension.In.FriendRequests.Match(e) Then 'Show Bot when the initial console load is complete.
-            BotShowAndWelcome()
-        End If
-    End Sub
-
-    Private Sub Extension_OnDoubleClickEvent(sender As Object, e As HPacket) Handles Extension.OnDoubleClickEvent 'G-Earth extension play button clicked.
-        If Extension.IsConnected Then
-            BotShowAndWelcome()
-        End If
-    End Sub
-
-    Private Sub Extension_OnConnectedEvent(sender As Object, e As HPacket) Handles Extension.OnConnectedEvent 'G-Earth is connected.
-        BotShowAndWelcome()
-    End Sub
-
-    Private Sub Extension_OnCriticalErrorEvent(sender As Object, e As String) Handles Extension.OnCriticalErrorEvent 'Extension critical error.
-        MsgBox(e & ".", MsgBoxStyle.Critical, "Critical error")
+    Private Sub Extension_OnCriticalErrorEvent(sender As Object, e As String) Handles Extension.OnCriticalErrorEvent
+        ShowInTaskbar = True
+        Activate()
+        MsgBox(e & ".", MsgBoxStyle.Critical, "Critical error") 'Show extension critical error
         Environment.Exit(0)
+    End Sub
+
+    Private Sub MainWindow_Closing(sender As Object, e As CancelEventArgs) Handles Me.Closing
+        ConsoleBot.HideBot() 'Hide bot before app closes
     End Sub
 End Class
