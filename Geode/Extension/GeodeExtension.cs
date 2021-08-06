@@ -317,9 +317,10 @@ namespace Geode.Extension
         {
             while (_installer.IsConnected)
             {
+                _installer.SendAsync(0);
                 await Task.Delay(500);
             }
-            OnCriticalError("Socket disconnected");
+            Environment.Exit(0); //OnCriticalError("Socket disconnected");
         }
         public virtual async Task<DataInterceptedEventArgs> WaitForPacketAsync(HMessage RequestedMessage, int TimeOut, string ContainString = "")
         {
