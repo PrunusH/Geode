@@ -78,10 +78,40 @@ namespace Geode.Extension
             this.LeaveButtonVisible = LeaveButtonVisible;
         }
 
+        private string GetCommandLineArg(string RequestedParameter)
+        {
+            try
+            {
+                string[] CmdArgs = Environment.GetCommandLineArgs();
+                for (int i = 0; i < CmdArgs.Count(); i++)
+                {
+                    if (CmdArgs[i] == RequestedParameter)
+                    {
+                        return CmdArgs[i + 1];
+                    }
+                }
+            } catch
+            {
+                return string.Empty;
+            }
+            return string.Empty;
+        }
+
+        private Boolean IsNumeric(string valor)
+        {
+            int result;
+            return int.TryParse(valor, out result);
+        }
+
         public void Start(int ConnectionPort = 0)
         {
             try
             {
+                if(IsNumeric(GetCommandLineArg("-p")))
+                {
+                    ConnectionPort = int.Parse(GetCommandLineArg("-p")); //Prioritize the CmdArg port
+                }
+
                 //Remove when automatic port detection is fixed
                 if (ConnectionPort == 0)
                 {
@@ -258,12 +288,12 @@ namespace Geode.Extension
             infoResponsePacket.Write(Description ?? string.Empty);
             infoResponsePacket.Write(UtilizingOnDoubleClick); // UtilizingOnDoubleClick
 
-            infoResponsePacket.Write(false); // IsInstalledExtension
-            infoResponsePacket.Write(string.Empty); // FileName
-            infoResponsePacket.Write(string.Empty); // Cookie
+            infoResponsePacket.Write(!string.IsNullOrEmpty(GetCommandLineArg("-f"))); // IsInstalledExtension
+            infoResponsePacket.Write(GetCommandLineArg("-f")); // FileName
+            infoResponsePacket.Write(GetCommandLineArg("-c")); // Cookie
 
             infoResponsePacket.Write(LeaveButtonVisible); // LeaveButtonVisible
-            infoResponsePacket.Write(false); // DeleteButtonVisible
+            infoResponsePacket.Write(!string.IsNullOrEmpty(GetCommandLineArg("-f"))); // DeleteButtonVisible
 
             _installer.SendPacketAsync(infoResponsePacket);
         }
